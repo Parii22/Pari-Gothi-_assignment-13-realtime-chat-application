@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Real-Time Group Chat & Direct Messaging Engine built with Node.js, Express, and Socket.io.">
+  <title>PulseChat — Real-Time Group & Direct Messaging</title>
+  
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons for clean UI -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+  <!-- Login / Identity Modal -->
+  <div id="login-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="brand-badge">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <h2>Welcome to PulseChat</h2>
+        <p>Real-time group collaboration &amp; secure direct messaging</p>
+      </div>
+
+      <form id="login-form" class="modal-form">
+        <div class="form-group">
+          <label for="username-input">Choose Your Display Name</label>
+          <div class="input-icon-wrapper">
+            <i class="fa-solid fa-user"></i>
+            <input type="text" id="username-input" placeholder="e.g. Aarav, Priya, Rohan..." maxlength="25" required autofocus>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Select Avatar Persona</label>
+          <div class="avatar-picker-grid" id="avatar-picker">
+            <!-- Avatars dynamically generated or pre-selected -->
+          </div>
+        </div>
+
+        <button type="submit" id="btn-login" class="btn-primary">
+          <span>Enter Chat Workspace</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main App Container -->
+  <div id="app-container" class="app-container hidden">
+    <!-- Left Navigation Bar (Server/App Icons) -->
+    <nav class="sidebar-activity">
+      <div class="app-logo-badge" title="PulseChat Network">
+        <i class="fa-solid fa-comments"></i>
+      </div>
+      <div class="activity-divider"></div>
+      <button class="nav-icon-btn active" id="nav-channels-btn" title="Channels & Groups">
+        <i class="fa-solid fa-hashtag"></i>
+      </button>
+      <button class="nav-icon-btn" id="nav-dms-btn" title="Direct Messages">
+        <i class="fa-solid fa-envelope"></i>
+        <span class="badge-counter hidden" id="dm-total-badge">0</span>
+      </button>
+      <div class="nav-spacer"></div>
+      <div class="connection-status-dot" id="socket-status-indicator" title="Connected to Real-Time Server"></div>
+    </nav>
+
+    <!-- Channels & Conversations Sidebar -->
+    <aside class="sidebar-channels" id="sidebar-channels">
+      <div class="sidebar-header">
+        <div class="workspace-info">
+          <h3>Pulse Workspace</h3>
+          <span class="status-pill"><i class="fa-solid fa-circle"></i> Live Engine</span>
+        </div>
+      </div>
+
+      <!-- Channel Rooms List -->
+      <div class="sidebar-section" id="channels-section">
+        <div class="section-title-row">
+          <span>CHANNELS</span>
+          <button id="btn-create-room" title="Join or Create Room"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <ul class="channel-list" id="channel-list">
+          <li class="channel-item active" data-room="general">
+            <i class="fa-solid fa-hashtag"></i>
+            <span class="channel-name">general</span>
+          </li>
+          <li class="channel-item" data-room="developers">
+            <i class="fa-solid fa-hashtag"></i>
+            <span class="channel-name">developers</span>
+          </li>
+          <li class="channel-item" data-room="random">
+            <i class="fa-solid fa-hashtag"></i>
+            <span class="channel-name">random</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Direct Messages Section in Sidebar -->
+      <div class="sidebar-section" id="dms-section">
+        <div class="section-title-row">
+          <span>DIRECT MESSAGES</span>
+        </div>
+        <ul class="dm-list" id="dm-conversations-list">
+          <!-- Dynamic Direct Message Threads -->
+          <li class="empty-state-text">No private messages yet. Click an online user to start chatting!</li>
+        </ul>
+      </div>
+
+      <!-- Current User Profile Footer -->
+      <div class="sidebar-user-footer">
+        <div class="user-avatar-wrapper">
+          <img id="current-user-avatar" src="" alt="Avatar" class="user-avatar">
+          <span class="online-indicator"></span>
+        </div>
+        <div class="user-details">
+          <span class="user-name" id="current-user-name">Guest</span>
+          <span class="user-id" id="current-user-socket">#0000</span>
+        </div>
+        <button id="btn-copy-id" class="btn-icon" title="Copy Socket ID for Direct Messaging">
+          <i class="fa-regular fa-copy"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Chat Main Area -->
+    <main class="chat-area">
+      <!-- Chat Header -->
+      <header class="chat-header">
+        <div class="chat-header-info">
+          <div class="channel-header-icon" id="header-icon">
+            <i class="fa-solid fa-hashtag"></i>
+          </div>
+          <div class="channel-header-details">
+            <h2 id="current-chat-title">general</h2>
+            <p id="current-chat-desc">Open discussion for everyone in the workspace</p>
+          </div>
+        </div>
+
+        <div class="chat-header-actions">
+          <div class="chat-mode-badge" id="chat-mode-badge">
+            <i class="fa-solid fa-users"></i>
+            <span>Group Chat</span>
+          </div>
+          <button id="btn-toggle-roster" class="btn-header-action" title="Toggle Active Users">
+            <i class="fa-solid fa-user-group"></i>
+            <span id="header-online-count">0</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Message History Container -->
+      <div class="messages-viewport" id="messages-viewport">
+        <!-- Messages will be rendered here -->
+        <div class="welcome-banner" id="welcome-banner">
+          <div class="welcome-icon">
+            <i class="fa-solid fa-hashtag"></i>
+          </div>
+          <h3 id="welcome-title">Welcome to #general!</h3>
+          <p id="welcome-subtitle">This is the start of the #general channel. In-memory messages are preserved up to the last 50 entries.</p>
+        </div>
+        <div id="messages-list" class="messages-list"></div>
+      </div>
+
+      <!-- Typing Indicator Relay -->
+      <div class="typing-indicator-bar" id="typing-indicator-bar">
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span class="typing-text" id="typing-text"></span>
+      </div>
+
+      <!-- Message Input Bar -->
+      <footer class="chat-input-area">
+        <form id="chat-form" class="chat-form">
+          <div class="input-actions-left">
+            <button type="button" class="btn-input-tool" id="btn-emoji-toggle" title="Insert Emoji">
+              <i class="fa-regular fa-face-smile"></i>
+            </button>
+          </div>
+          <input 
+            type="text" 
+            id="message-input" 
+            placeholder="Message #general..." 
+            autocomplete="off" 
+            maxlength="1000" 
+            required
+          >
+          <button type="submit" id="btn-send-message" class="btn-send" title="Send Message">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </form>
+
+        <!-- Quick Emoji Popup -->
+        <div class="emoji-picker-dropdown hidden" id="emoji-picker">
+          <button type="button" class="emoji-btn">👋</button>
+          <button type="button" class="emoji-btn">🚀</button>
+          <button type="button" class="emoji-btn">🔥</button>
+          <button type="button" class="emoji-btn">🎉</button>
+          <button type="button" class="emoji-btn">❤️</button>
+          <button type="button" class="emoji-btn">👏</button>
+          <button type="button" class="emoji-btn">✨</button>
+          <button type="button" class="emoji-btn">💡</button>
+          <button type="button" class="emoji-btn">💻</button>
+          <button type="button" class="emoji-btn">👍</button>
+        </div>
+      </footer>
+    </main>
+
+    <!-- Right Sidebar: Room Active User Roster -->
+    <aside class="sidebar-roster" id="sidebar-roster">
+      <div class="roster-header">
+        <h4>ONLINE IN ROOM — <span id="roster-count">0</span></h4>
+      </div>
+      <div class="roster-list" id="roster-list">
+        <!-- Dynamic online user cards -->
+      </div>
+    </aside>
+  </div>
+
+  <!-- Custom Room Modal -->
+  <div id="custom-room-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-small">
+      <div class="modal-header">
+        <h3>Join or Create Channel</h3>
+        <p>Enter any room name (e.g., design, announcements, gaming)</p>
+      </div>
+      <form id="custom-room-form" class="modal-form">
+        <div class="form-group">
+          <div class="input-icon-wrapper">
+            <i class="fa-solid fa-hashtag"></i>
+            <input type="text" id="custom-room-input" placeholder="channel-name" pattern="[a-zA-Z0-9-_]+" maxlength="20" required>
+          </div>
+        </div>
+        <div class="modal-btn-row">
+          <button type="button" id="btn-close-room-modal" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Join Room</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Socket.io Client Script -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Main Client Application -->
+  <script src="app.js"></script>
+</body>
+</html>
