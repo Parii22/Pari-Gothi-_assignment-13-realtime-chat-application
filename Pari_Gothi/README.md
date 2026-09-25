@@ -3,6 +3,10 @@
 A high-performance, production-ready Real-Time Group Chat & Direct Messaging Engine built with **Node.js**, **Express.js**, and **Socket.io**. Features multi-room channels, instant in-memory message history replay, debounced typing indicators, live presence rosters, and private 1-on-1 direct messaging delivered strictly to the target recipient socket.
 
 ---
+## 🔗 Live Link:
+https://pari-gothi-assignment-13-realtime-chat.onrender.com 
+
+---
 
 ## 🚀 Key Features
 
